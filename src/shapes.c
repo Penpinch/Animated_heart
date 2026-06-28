@@ -58,7 +58,7 @@ static const char *large[] = {
     "                @@@@@@                ",
 };
 
-static const char **get_shape(int size){
+static const char **getShape(int size){
     switch(size){
         case SMALL: return small; break;
         case MEDIUM: return medium; break;
@@ -66,7 +66,7 @@ static const char **get_shape(int size){
     }
 }
 
-void set_color(int line, int total){
+void setColor(int line, int total){
     int r = 255;
     int g = 40 + line * 8;
     int b = 80 + line * 7;
@@ -74,7 +74,7 @@ void set_color(int line, int total){
     printf("\033[38;2;%d;%d;%dm", r, g, b);
 }
 
-void draw_heart(int size){
+void drawHeart(int size){
     const char **heart = get_shape(size);
 
     for(int i = 0; i < ROWS; i++){ set_color(i, ROWS); printf("%s\n", heart[i]); }

@@ -5,7 +5,7 @@ typedef enum{
     SMALL, MEDIUM, LARGE
 } Shapes;
 
-void set_color(int line, int total);
-void draw_heart(int size);
+void setColor(int line, int total);
+void drawHeart(int size);
 
 # endif
