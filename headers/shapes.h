@@ -6,6 +6,6 @@ typedef enum{
 } Shapes;
 
 void setColor(int line, int total);
-void drawHeart(int size);
+void drawHeart(int size, int x, int y);
 
 # endif

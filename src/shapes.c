@@ -1,5 +1,6 @@
 # include <stdio.h>
 # include "shapes.h"
+# include "terminal.h"
 
 # define RESET "\033[0m"
 # define ROWS 15
@@ -71,12 +72,16 @@ void setColor(int line, int total){
     int g = 40 + line * 8;
     int b = 80 + line * 7;
 
-    printf("\033[38;2;%d;%d;%dm", r, g, b);
+    bufferPrint("\033[38;2;%d;%d;%dm", r, g, b);
 }
 
-void drawHeart(int size){
-    const char **heart = get_shape(size);
+void drawHeart(int size, int x, int y){
+    const char **heart = getShape(size);
 
-    for(int i = 0; i < ROWS; i++){ set_color(i, ROWS); printf("%s\n", heart[i]); }
-    printf(RESET);
+    for(int i = 0; i < ROWS; i++){ setColor(i, ROWS); 
+        bufferMove(y + i, x);
+        setColor(i, ROWS);
+        bufferPrint("%s", heart[i]);
+    }
+    bufferPrint(RESET);
 }
