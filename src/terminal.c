@@ -17,7 +17,7 @@
     # ifndef ENABLE_VIRTUAL_TERMINAL_PROCESSING
         # define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
     # endif
-# else // I had to prove this in Linux(Fedora probably).
+# else
     # include <sys/ioctl.h>
     # include <unistd.h>
 # endif
@@ -80,7 +80,6 @@ void terminalInit(){
 
 void terminalClear(){ 
     bufferPrint("\033[2J\033[H");
-    // bufferPrint("\033[H");
     bufferFlush();
 }
 
