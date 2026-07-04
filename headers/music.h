@@ -21,7 +21,7 @@ typedef struct{
     int duration_ms;
 } Note;
 
-const Note melody[] = {
+static const Note melody[] = {
     {NOTE_C4,500}, {NOTE_E4,500}, {NOTE_E4,500}, {NOTE_F4,500}, {NOTE_E4,500}, {NOTE_D4,1000},
     {NOTE_E4,500}, {NOTE_G4,500}, {NOTE_G4,500}, {NOTE_F4,500}, {NOTE_E4,500}, {NOTE_D4,1000},
     {NOTE_E4,500}, {NOTE_C5,500}, {NOTE_C5,500}, {NOTE_A4,500}, {NOTE_F4,500}, {NOTE_E4,500},
@@ -33,5 +33,6 @@ const Note melody[] = {
 void renderNote(int16_t *buffer, int num_samples, double frequency);
 int16_t *buildAudio(size_t *out_total_samples);
 void playAudio(int16_t *buffer, size_t total_samples);
+void playAudioAsync();
 
 # endif

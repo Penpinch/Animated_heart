@@ -4,11 +4,12 @@
 # include "particles.h"
 # include "terminal.h"
 # include "text.h"
+# include "music.h"
 
 # ifdef _WIN32
     # include <windows.h>
 # else 
-    # include <unistd.h> // For macOS and Linux.
+    # include <unistd.h> // For Linux.
 # endif
 
 int main(){
@@ -26,6 +27,7 @@ int main(){
 
     terminalInit();
     terminalHideCursor();
+    playAudioAsync();
 
     TerminalDims screen = terminalGetSize();
     Animation animation;
