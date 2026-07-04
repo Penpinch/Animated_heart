@@ -14,6 +14,7 @@
 # define NOTE_C5 523.25
 
 # define PI 3.14159265358979323846
+# define SAMPLE_RATE 44100
 
 typedef struct{
     double frequency_hz;
@@ -30,5 +31,7 @@ const Note melody[] = {
 # define NUM_NOTES (sizeof(melody) / sizeof(melody[0]))
 
 void renderNote(int16_t *buffer, int num_samples, double frequency);
+int16_t *buildAudio(size_t *out_total_samples);
+void playAudio(int16_t *buffer, size_t total_samples);
 
 # endif
