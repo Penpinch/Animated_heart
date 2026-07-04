@@ -60,7 +60,7 @@ gcc src/heart.c src/shapes.c src/animation.c src/terminal.c src/text.c src/parti
 
 Run the executable:
 ```bash
-./animated_heart.exe
+./animated_heart
 ```
 
 ## Technologies Used
