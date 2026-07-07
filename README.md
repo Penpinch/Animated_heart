@@ -7,6 +7,8 @@ An animation of a heart for a gift made in the **C** programming language.
 - Implemented in C.
 - Runs in terminal.
 - Different colors.
+- Plays a melody during the animation.
+- The duration of the music is adapted to the duration of the text.
 
 >Tested on Microsoft Windows 11, Fedora 44 and Ubuntu 25.10.
 
