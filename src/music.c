@@ -42,28 +42,6 @@ void renderNote(int16_t *buffer, int num_samples, double frequency){
     }
 }
 
-// size_t melodySmaples(){
-//     size_t samples = 0;
-//     for(size_t i = 0; i < NUM_NOTES; i++){ samples += (size_t)((melody[i].duration_ms / 1000.0) * SAMPLE_RATE); }
-
-//     return samples;
-// }
-
-// int16_t *buildAudio(size_t *out_total_samples){
-//     int16_t *buffer = (int16_t*)calloc(total_samples, sizeof(int16_t));
-//     if(!buffer){ fprintf(stderr, "Error: couldn't use memory for audio.\n"); exit(1); }
-
-//     size_t offset = 0;
-//     for(size_t i = 0; i < NUM_NOTES; i++){
-//         int n = (int)((melody[i].duration_ms / 1000.0) * SAMPLE_RATE);
-//         renderNote(buffer + offset, n, melody[i].frequency_hz);
-//         offset += n;
-//     }
-
-//     *out_total_samples = total_samples;
-//     return buffer;
-// }
-
 static volatile bool stop_flag = false;
 
 void audioStop(){ stop_flag = true; }
@@ -88,13 +66,12 @@ void audioStop(){ stop_flag = true; }
             fprintf(stderr, "Error: couldn't open the audio device.\n");
             CloseHandle(h_event);
             return;
-            // exit(1);
         }
 
         size_t note_index = 0;
         while(!stop_flag){
             const Note *note = &melody[note_index % NUM_NOTES];
-            int n = (int)((note->duration_ms / 1000) * SAMPLE_RATE);
+            int n = (int)((note->duration_ms / 1000.0) * SAMPLE_RATE);
 
             int16_t *buffer = (int16_t*)malloc((size_t)n * sizeof(int16_t));
             renderNote(buffer, n, note->frequency_hz);
@@ -138,14 +115,17 @@ void audioStop(){ stop_flag = true; }
     }
 
 # else
-    void playAudio(int16_t *buffer, size_t total_samples){
+    static pthread_t audio_thread;
+    static int thread_started = 0;
+
+    void playAudio(){
         snd_pcm_t *pcm_handle;
         snd_pcm_hw_params_t *params;
         int err;
 
         if((err = snd_pcm_open(&pcm_handle, "default", SND_PCM_STREAM_PLAYBACK, 0)) < 0){
             fprintf(stderr, "Error at opening ALSA device: %s\n", snd_strerror(err));
-            exit(1);
+            return;
         }
 
         snd_pcm_hw_params_alloca(&params);
@@ -159,37 +139,53 @@ void audioStop(){ stop_flag = true; }
 
         if((err = snd_pcm_hw_params(pcm_handle, params)) < 0){
             fprintf(stderr, "Error configuring ALSA parameters: %s\n", snd_strerror(err));
-            exit(1);
+            snd_pcm_close(pcm_handle);
+            return;
         }
 
-        snd_pcm_uframes_t frames_written = 0;
-        while(frames_written < total_samples){
-            snd_pcm_sframes_t written = snd_pcm_writei(pcm_handle, buffer + frames_written, total_samples - frames_written);
-            if(written < 0){
-                written = snd_pcm_recover(pcm_handle, (int)written, 0);
-                if(written < 0){ fprintf(stderr, "Error de escritura ALSA: %s\n", snd_strerror((int)written)); break; }
-            } else {
-                frames_written += written;
+        size_t note_index = 0;
+        while(!stop_flag){
+            const Note *note = &melody[note_index % NUM_NOTES];
+            int n = (int)((note->duration_ms / 1000.0) * SAMPLE_RATE);
+
+            int16_t *buffer = (int16_t*)malloc((size_t)n * sizeof(int16_t));
+            renderNote(buffer, n, note->frequency_hz);
+
+            snd_pcm_uframes_t frames_written = 0;
+            while(frames_written < (snd_pcm_uframes_t)n && !stop_flag){
+                snd_pcm_sframes_t written = snd_pcm_writei(pcm_handle, buffer + frames_written, (snd_pcm_uframes_t)n - frames_written);
+                if(written < 0){
+                    written = snd_pcm_recover(pcm_handle, (int)written, 0);
+                    if(written < 0){ fprintf(stderr, "Error de escritura ALSA: %s\n", snd_strerror((int)written)); break; }
+                } else {
+                    frames_written += (snd_pcm_uframes_t)written;
+                }
             }
+            free(buffer);
+            if(stop_flag){ break; }
+            note_index++;
         }
 
-        snd_pcm_drain(pcm_handle);
+        snd_pcm_drop(pcm_handle);
         snd_pcm_close(pcm_handle);
     }
 
     void *audioThread(void *param){
         (void)param;
-        size_t total_samples;
-        int16_t *audio = buildAudio(&total_samples);
-        playAudio(audio, total_samples);
-        free(audio);
+        playAudio();
 
         return NULL;
     }
 
     void playAudioAsync(){
-        pthread_t thread;
-        pthread_create(&thread, NULL, audioThread, NULL);
-        pthread_detach(thread);
+        stop_flag = false;
+        thread_started = (pthread_create(&audio_thread, NULL, audioThread, NULL) == 0);
+    }
+
+    void waitForAudio(){
+        if(thread_started){
+            pthread_join(audio_thread, NULL);
+            thread_started = 0;
+        }
     }
 # endif

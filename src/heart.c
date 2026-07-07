@@ -52,6 +52,9 @@ int main(){
         animationUpdate(&animation);
     }
 
+    audioStop();
+    waitForAudio();
+
     terminalShowCursor();
     terminalReset();
 
