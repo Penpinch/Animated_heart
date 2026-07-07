@@ -3,6 +3,7 @@
 # include <math.h>
 # include <stdlib.h>
 # include <string.h>
+# include <stdbool.h>
 # include "music.h"
 
 # ifdef _WIN32
@@ -41,26 +42,36 @@ void renderNote(int16_t *buffer, int num_samples, double frequency){
     }
 }
 
-int16_t *buildAudio(size_t *out_total_samples){
-    size_t total_samples = 0;
-    for(size_t i = 0; i < NUM_NOTES; i++){ total_samples += (size_t)((melody[i].duration_ms / 1000.0) * SAMPLE_RATE); }
+// size_t melodySmaples(){
+//     size_t samples = 0;
+//     for(size_t i = 0; i < NUM_NOTES; i++){ samples += (size_t)((melody[i].duration_ms / 1000.0) * SAMPLE_RATE); }
 
-    int16_t *buffer = (int16_t*)calloc(total_samples, sizeof(int16_t));
-    if(!buffer){ fprintf(stderr, "Error: couldn't use memory for audio.\n"); exit(1); }
+//     return samples;
+// }
 
-    size_t offset = 0;
-    for(size_t i = 0; i < NUM_NOTES; i++){
-        int n = (int)((melody[i].duration_ms / 1000.0) * SAMPLE_RATE);
-        renderNote(buffer + offset, n, melody[i].frequency_hz);
-        offset += n;
-    }
+// int16_t *buildAudio(size_t *out_total_samples){
+//     int16_t *buffer = (int16_t*)calloc(total_samples, sizeof(int16_t));
+//     if(!buffer){ fprintf(stderr, "Error: couldn't use memory for audio.\n"); exit(1); }
 
-    *out_total_samples = total_samples;
-    return buffer;
-}
+//     size_t offset = 0;
+//     for(size_t i = 0; i < NUM_NOTES; i++){
+//         int n = (int)((melody[i].duration_ms / 1000.0) * SAMPLE_RATE);
+//         renderNote(buffer + offset, n, melody[i].frequency_hz);
+//         offset += n;
+//     }
+
+//     *out_total_samples = total_samples;
+//     return buffer;
+// }
+
+static volatile bool stop_flag = false;
+
+void audioStop(){ stop_flag = true; }
 
 # ifdef _WIN32
-    void playAudio(int16_t *buffer, size_t total_samples){
+    static HANDLE audio_thread_handle = NULL;
+
+    void playAudio(){
         WAVEFORMATEX wa_for_x;
         memset(&wa_for_x, 0, sizeof(wa_for_x));
         wa_for_x.wFormatTag = WAVE_FORMAT_PCM;
@@ -75,35 +86,56 @@ int16_t *buildAudio(size_t *out_total_samples){
 
         if(waveOutOpen(&h_wave_out, WAVE_MAPPER, &wa_for_x, (DWORD_PTR)h_event, 0, CALLBACK_EVENT) != MMSYSERR_NOERROR){
             fprintf(stderr, "Error: couldn't open the audio device.\n");
-            exit(1);
+            CloseHandle(h_event);
+            return;
+            // exit(1);
         }
 
-        WAVEHDR header;
-        memset(&header, 0, sizeof(header));
-        header.lpData = (LPSTR)buffer;
-        header.dwBufferLength = (DWORD)(total_samples * sizeof(int16_t));
+        size_t note_index = 0;
+        while(!stop_flag){
+            const Note *note = &melody[note_index % NUM_NOTES];
+            int n = (int)((note->duration_ms / 1000) * SAMPLE_RATE);
 
-        waveOutPrepareHeader(h_wave_out, &header, sizeof(header));
-        waveOutWrite(h_wave_out, &header, sizeof(header));
+            int16_t *buffer = (int16_t*)malloc((size_t)n * sizeof(int16_t));
+            renderNote(buffer, n, note->frequency_hz);
 
-        while(!(header.dwFlags & WHDR_DONE)){ WaitForSingleObject(h_event, INFINITE); }
-
-        waveOutUnprepareHeader(h_wave_out, &header, sizeof(header));
+            WAVEHDR header;
+            memset(&header, 0, sizeof(header));
+            header.lpData = (LPSTR)buffer;
+            header.dwBufferLength = (DWORD)(n * sizeof(int16_t));
+    
+            waveOutPrepareHeader(h_wave_out, &header, sizeof(header));
+            waveOutWrite(h_wave_out, &header, sizeof(header));
+    
+            while(!(header.dwFlags & WHDR_DONE)){ WaitForSingleObject(h_event, INFINITE); }
+    
+            waveOutUnprepareHeader(h_wave_out, &header, sizeof(header));
+            free(buffer);
+            note_index++;
+        }
         waveOutClose(h_wave_out);
         CloseHandle(h_event);
     }
 
     DWORD WINAPI audioThread(LPVOID param){
         (void)param;
-        size_t total_samples;
-        int16_t *audio = buildAudio(&total_samples);
-        playAudio(audio, total_samples);
-        free(audio);
+        playAudio();
 
         return 0;
     }
 
-    void playAudioAsync(){ CreateThread(NULL, 0, audioThread, NULL, 0, NULL); }
+    void playAudioAsync(){ 
+        stop_flag = false;
+        audio_thread_handle = CreateThread(NULL, 0, audioThread, NULL, 0, NULL); 
+    }
+
+    void waitForAudio(){
+        if(audio_thread_handle){
+            WaitForSingleObject(audio_thread_handle, INFINITE);
+            CloseHandle(audio_thread_handle);
+            audio_thread_handle = NULL;
+        }
+    }
 
 # else
     void playAudio(int16_t *buffer, size_t total_samples){

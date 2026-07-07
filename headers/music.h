@@ -31,8 +31,10 @@ static const Note melody[] = {
 # define NUM_NOTES (sizeof(melody) / sizeof(melody[0]))
 
 void renderNote(int16_t *buffer, int num_samples, double frequency);
-int16_t *buildAudio(size_t *out_total_samples);
-void playAudio(int16_t *buffer, size_t total_samples);
+// int16_t *buildAudio(size_t *out_total_samples);
+void playAudio();
 void playAudioAsync();
+void audioStop();
+void waitForAudio();
 
 # endif
