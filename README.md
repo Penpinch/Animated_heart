@@ -56,7 +56,7 @@ Run the executable:
 
 ### Linux:
 ```bash
-gcc src/heart.c src/shapes.c src/animation.c src/terminal.c src/text.c src/particles.c src/music.c -Iheaders/ -o animated_heart.exe -lasound -lm
+gcc src/heart.c src/shapes.c src/animation.c src/terminal.c src/text.c src/particles.c src/music.c -Iheaders/ -o animated_heart -lasound -lm
 ```
 >ALSA is necessary to compile on Linux.
 
